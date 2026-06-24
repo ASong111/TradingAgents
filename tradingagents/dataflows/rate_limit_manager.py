@@ -34,9 +34,9 @@ class RateLimitManager:
         self._request_history = deque(maxlen=100)  # Track last 100 requests
         self._request_lock = threading.RLock()
         self._concurrent_requests = 0
-        self._max_concurrent = 2  # Maximum concurrent yfinance requests
-        self._min_interval = 0.5  # Minimum seconds between requests
-        self._max_interval = 10.0  # Maximum backoff interval
+        self._max_concurrent = 1  # Maximum concurrent yfinance requests (reduced for stricter rate limiting)
+        self._min_interval = 2.0  # Minimum seconds between requests (increased for stricter rate limiting)
+        self._max_interval = 30.0  # Maximum backoff interval (increased for stricter rate limiting)
         self._concurrency_semaphore = threading.Semaphore(self._max_concurrent)
 
     def _calculate_wait_time(self) -> float:
@@ -71,7 +71,7 @@ class RateLimitManager:
             self._request_history.append(time.time())
 
     def execute_with_rate_limit(self, func: Callable[[], Any],
-                               max_retries: int = 3,
+                               max_retries: int = 5,  # Increased from 3 to 5 for stricter rate limiting
                                description: str = "yfinance request") -> Any:
         """
         Execute a yfinance function with rate limiting and retry logic.
