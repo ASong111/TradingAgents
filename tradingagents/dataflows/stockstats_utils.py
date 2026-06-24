@@ -26,17 +26,16 @@ def yf_retry(func, max_retries=3, base_delay=2.0):
     yfinance raises YFRateLimitError on HTTP 429 responses but does not
     retry them internally. This wrapper adds retry logic specifically
     for rate limits. Other exceptions propagate immediately.
+
+    Note: For better rate limit coordination, use execute_with_global_rate_limit
+    from rate_limit_manager instead of this function.
     """
-    for attempt in range(max_retries + 1):
-        try:
-            return func()
-        except YFRateLimitError:
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning(f"Yahoo Finance rate limited, retrying in {delay:.0f}s (attempt {attempt + 1}/{max_retries})")
-                time.sleep(delay)
-            else:
-                raise
+    # Import here to avoid circular imports
+    from .rate_limit_manager import execute_with_global_rate_limit
+
+    # Use the global rate limit manager for better coordination
+    description = f"yfinance call: {func.__name__ if hasattr(func, '__name__') else 'anonymous'}"
+    return execute_with_global_rate_limit(func, max_retries, description)
 
 
 def _ensure_date_column(data: pd.DataFrame) -> pd.DataFrame:
